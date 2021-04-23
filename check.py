@@ -449,13 +449,28 @@ def generate_rewards():
 def generate_rewards_alt():
     rewards_table = [[0.0 for a in range(len(ACTIONS))] for s in range(TOTAL_NO_OF_STATES)]
     for s in range(TOTAL_NO_OF_STATES):
-        agent_pos, target_pos, call = get_state[s]
+        (agent_pos, target_pos, call) = get_state[s]
         for a in range(len(ACTIONS)):
             if ACTIONS[a] != 'STAY':
                 rewards_table[s][a] += STEP_COST
             if agent_pos == target_pos and call == 1:
                 rewards_table[s][a] += REWARD
     return rewards_table
+
+
+def generate_start_belief():
+    belief = []
+    for s in range(TOTAL_NO_OF_STATES):
+        (agent_pos, target_pos, call) = get_state[s]
+        tx_ty = reverse_hash(target_pos)
+        ax_ay = reverse_hash(agent_pos)
+        if tx_ty != (0,0):
+            belief.append(0.0)
+        elif ax_ay in [(0,0), (0,1), (1,1)]:
+            belief.append(0.0)
+        else:
+            belief.append(0.1)
+    return belief
 
 
 ''' creates the POMDP file . PIPE the output to the desired file'''
@@ -465,10 +480,17 @@ def generate_POMDP_file():
     print("states : {0}".format(TOTAL_NO_OF_STATES))
     print("actions : {0}".format(len(ACTIONS)))
     print("observations : {0}".format(NO_OF_OBSERVATIONS))
-
+    
     #initialisation
     generate()
+
     #I am skipping the initial belief state for now 
+    start_beliefs = generate_start_belief()
+    print("start: ", end="")
+    for prob in start_beliefs:
+        print(prob, end=" ")
+    print("")
+
     #now the transition table
     transition_table = create_transition_table_alt()
     #transition_table = create_transition_table()
@@ -514,6 +536,7 @@ def generate_POMDP_file():
     for s in range(TOTAL_NO_OF_STATES):
         for a in range(len(ACTIONS)):
             print("R : {0} : * : {1} : * {2}".format(a, s, rewards_table[s][a]))
-     
+    
+
 if __name__ == '__main__':
     generate_POMDP_file()
