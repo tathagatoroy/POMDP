@@ -7,9 +7,11 @@ GRID_HEIGHT = 2
 GRID_WIDTH = 4
 TOTAL_NO_OF_STATES = NO_OF_AGENT_POSITIONS*NO_OF_TARGET_POSITIONS*NO_OF_CALL_STATES
 NO_OF_OBSERVATIONS = 6
-
+DISCOUNT = 0.5
 ROLL_NUMBER = 2019111020
-p_x = 1-(1020%30 + 1)/100
+p_x = 1-((ROLL_NUMBER%1000)%30 + 1)/100
+REWARD = (ROLL_NUMBER)%90 + 10
+STEP_COST = -1
 
 ''' function to convert (x,y) denoting grid position to an integer ''' 
 def hash(x,y):
@@ -122,7 +124,7 @@ OBERVATIONS = [i+1 for i in range(NO_OF_OBSERVATIONS)]
 
 ''' function to generate the transition table '''
 def create_transition_table():
-    transition_table = [[[] for i in range(len(ACTIONS))] for i  in range(TOTAL_NO_OF_STATES)]
+    transition_table = [[[] for j in range(len(ACTIONS))] for i  in range(TOTAL_NO_OF_STATES)]
     for s in range(TOTAL_NO_OF_STATES):
         for a in ACTIONS:
             (current_agent,current_target,call) = get_state[s]
@@ -316,10 +318,92 @@ def create_transition_table():
     return transition_table
 
 
-generate()
-transition_table = create_transition_table()
-for l in range(len(transition_table)):
-    for a in range(len(transition_table[l])):
-        print("state : {0} ,action : {1} size of distribution : {2} sum : {3}".format(l,a,len(transition_table[l][a]),sum(transition_table[l][a])))
-        if(abs(sum(transition_table[l][a]) - 1.00) > 0.00001):
-            print("WRONG")
+'''function returns a observation table  .For every action and end state it returns a list of 6 tuple giving the probability of observation '''
+def generate_observations():
+    observation_table = [[[] for i in range(len(ACTIONS))] for j in range(TOTAL_NO_OF_STATES)]
+    for s in range(TOTAL_NO_OF_STATES):
+        for i in range(len(ACTIONS)):
+            (agent_pos,target_pos,call) = get_state[s]
+            distribution = [0.0 for i in range(NO_OF_OBSERVATIONS)]
+            (a_x,a_y) = reverse_hash(agent_pos)
+            (t_x,t_y) = reverse_hash(target_pos)
+
+            #observation o1
+            if(a_x == t_x and a_y == t_y):
+                distribution[0] += 1.00
+            #observation o2
+            elif((a_x + 1) == t_x and a_y == t_y):
+                distribution[1] += 1.00
+            #observation o3
+            elif(a_x == t_x and (a_y + 1) == t_y):
+                distribution[2] += 1.00
+            #observation o4
+            elif(a_x == (t_x + 1) and a_y == t_y):
+                distribution[3] += 1.00
+            #observation o5
+            elif(a_x == t_x and (a_y - 1) == t_y):
+                distribution[4] += 1.00
+            #observatio o6
+            else:
+                distribution[5] += 1.00
+            observation_table[s][i] = distribution
+    return observation_table
+
+''' function which generates a reward table. For every (s,a,s') where s= start state,a = action and final state = s' return reward'''
+def generate_rewards():
+    rewards_table = [[[0 for i in range(TOTAL_NO_OF_STATES)] for j in range(len(ACTIONS))] for k in range(TOTAL_NO_OF_STATES)]
+    for s in range(TOTAL_NO_OF_STATES):
+        for a in range(len(ACTIONS)):
+            for z in range(TOTAL_NO_OF_STATES):
+                (final_agent,final_target,final_call) = get_state[z]
+                if(final_agent == final_target and final_call == 0):
+                    (start_agent,start_target,start_call) = get_state[s]
+                    if(start_agent == start_target and start_call == 1):
+                        rewards_table[s][a][z] = REWARD
+                    else:
+                        rewards_table[s][a][z] = STEP_COST
+                else:
+                    rewards_table[s][a][z] = STEP_COST
+    return rewards_table
+
+
+''' creates the POMDP file . PIPE the output to the desired file'''
+def generate_POMDP_file():
+    print("discount : {0}".format(DISCOUNT))
+    print("values : reward")
+    print("states : {0}".format(TOTAL_NO_OF_STATES))
+    print("actions : {0}".format(len(ACTIONS)))
+    print("observations : {0}".format(NO_OF_OBSERVATIONS))
+
+    #initialisation
+    generate()
+    #I am skipping the initial belief state for now 
+    #now the transition table
+    transition_table = create_transition_table()
+    for l in range(len(transition_table)):
+        for a in range(len(transition_table[l])):
+            print("T : {0} : {1}".format(a,l))
+            for r in transition_table[l][a]:
+                print(r,end = " ")
+            print("")
+
+    #now the observation table
+    observation_table = generate_observations()
+    for l in range(len(observation_table)):
+        for a in range(len(observation_table[l])):
+            print("O : {0} : {1}".format(a,l))
+            for r in observation_table[l][a]:
+                print(r,end = " ")
+            print("")
+    
+    #now the rewards table
+    rewards_table = generate_rewards()
+    for s in range(len(rewards_table)):
+        for a in range(len(rewards_table[l])):
+            for z in range(len(rewards_table[l][a])):
+                for o in range(NO_OF_OBSERVATIONS):
+                    print("R : {0} : {1} : {2} : {3} {4}".format(a,s,z,o,rewards_table[l][a][z]))
+     
+    
+
+generate_POMDP_file()
