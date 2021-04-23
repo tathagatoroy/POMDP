@@ -371,7 +371,7 @@ def create_transition_table():
 def generate_observations():
     observation_table = [[[] for i in range(len(ACTIONS))] for j in range(TOTAL_NO_OF_STATES)]
     for s in range(TOTAL_NO_OF_STATES):
-        for i in range(len(ACTIONS)):
+        for a in range(len(ACTIONS)):
             (agent_pos,target_pos,call) = get_state[s]
             distribution = [0.0 for i in range(NO_OF_OBSERVATIONS)]
             (a_x,a_y) = reverse_hash(agent_pos)
@@ -395,8 +395,38 @@ def generate_observations():
             #observatio o6
             else:
                 distribution[5] += 1.00
-            observation_table[s][i] = distribution
+            observation_table[s][a] = distribution
     return observation_table
+
+''' Generates observation_table such that observation_table[i] gives a 6-tuple giving the probability of observtions in the ith state '''
+def generate_observations_alt():
+    observation_table = []
+    for s in range(TOTAL_NO_OF_STATES):
+        distribution = [0.0 for i in range(NO_OF_OBSERVATIONS)]
+        agent_pos, target_pos, call = get_state[s]
+        (a_x,a_y) = reverse_hash(agent_pos)
+        (t_x,t_y) = reverse_hash(target_pos)
+        #observation o1
+        if(a_x == t_x and a_y == t_y):
+            distribution[0] += 1.00
+        #observation o2
+        elif((a_x + 1) == t_x and a_y == t_y):
+            distribution[1] += 1.00
+        #observation o3
+        elif(a_x == t_x and (a_y + 1) == t_y):
+            distribution[2] += 1.00
+        #observation o4
+        elif(a_x == (t_x + 1) and a_y == t_y):
+            distribution[3] += 1.00
+        #observation o5
+        elif(a_x == t_x and (a_y - 1) == t_y):
+            distribution[4] += 1.00
+        #observatio o6
+        else:
+            distribution[5] += 1.00
+        observation_table.append(distribution)
+    return observation_table
+
 
 ''' function which generates a reward table. For every (s,a,s') where s= start state,a = action and final state = s' return reward'''
 def generate_rewards():
@@ -415,6 +445,18 @@ def generate_rewards():
                     rewards_table[s][a][z] = STEP_COST
     return rewards_table
 
+''' Generates rewards with just action and final state as initial state is not required'''
+def generate_rewards_alt():
+    rewards_table = [[0.0 for a in range(len(ACTIONS))] for s in range(TOTAL_NO_OF_STATES)]
+    for s in range(TOTAL_NO_OF_STATES):
+        agent_pos, target_pos, call = get_state[s]
+        for a in range(len(ACTIONS)):
+            if ACTIONS[a] != 'STAY':
+                rewards_table[s][a] += STEP_COST
+            if agent_pos == target_pos and call == 1:
+                rewards_table[s][a] += REWARD
+    return rewards_table
+
 
 ''' creates the POMDP file . PIPE the output to the desired file'''
 def generate_POMDP_file():
@@ -428,7 +470,8 @@ def generate_POMDP_file():
     generate()
     #I am skipping the initial belief state for now 
     #now the transition table
-    transition_table = create_transition_table()
+    transition_table = create_transition_table_alt()
+    #transition_table = create_transition_table()
     for l in range(len(transition_table)):
         for a in range(len(transition_table[l])):
             print("T : {0} : {1}".format(a,l))
@@ -436,6 +479,7 @@ def generate_POMDP_file():
                 print(r,end = " ")
             print("")
 
+    '''
     #now the observation table
     observation_table = generate_observations()
     for l in range(len(observation_table)):
@@ -444,7 +488,18 @@ def generate_POMDP_file():
             for r in observation_table[l][a]:
                 print(r,end = " ")
             print("")
+    '''
+
+    # Alternate method for observation table
+    observation_table = generate_observations_alt()
+    for s in range(len(observation_table)):
+        distribution = observation_table[s]
+        print("O: * : {0}".format(s))
+        for prob in distribution:
+            print(prob, end=" ")
+        print("")
     
+    '''
     #now the rewards table
     rewards_table = generate_rewards()
     for s in range(len(rewards_table)):
@@ -452,7 +507,13 @@ def generate_POMDP_file():
             for z in range(len(rewards_table[l][a])):
                 for o in range(NO_OF_OBSERVATIONS):
                     print("R : {0} : {1} : {2} : {3} {4}".format(a,s,z,o,rewards_table[l][a][z]))
-     
-    
+    '''
 
-generate_POMDP_file()
+    # Alternate method for rewards table
+    rewards_table = generate_rewards_alt()
+    for s in range(TOTAL_NO_OF_STATES):
+        for a in range(len(ACTIONS)):
+            print("R : {0} : * : {1} : * {2}".format(a, s, rewards_table[s][a]))
+     
+if __name__ == '__main__':
+    generate_POMDP_file()
