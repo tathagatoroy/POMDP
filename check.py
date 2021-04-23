@@ -8,12 +8,12 @@ GRID_WIDTH = 4
 TOTAL_NO_OF_STATES = NO_OF_AGENT_POSITIONS*NO_OF_TARGET_POSITIONS*NO_OF_CALL_STATES
 NO_OF_OBSERVATIONS = 6
 DISCOUNT = 0.5
-ROLL_NUMBER = 2019111013 #2019111020
-p_x = 1-((ROLL_NUMBER%10000)%30 + 1)/100
+ROLL_NUMBER = 2019111013
+p_x = 1-(((ROLL_NUMBER%10000)%30 + 1)/100)
 REWARD = (ROLL_NUMBER)%90 + 10
 STEP_COST = -1
 
-QUESTION_NUMBER = 1
+QUESTION_NUMBER = 2
 
 ''' function to convert (x,y) denoting grid position to an integer ''' 
 def hash(x,y):
@@ -467,7 +467,7 @@ def generate_start_belief(question=1):
             (agent_pos, target_pos, call) = get_state[s]
             tx_ty = reverse_hash(target_pos)
             ax_ay = reverse_hash(agent_pos)
-            if tx_ty != (0,0):
+            if tx_ty != (0,1):
                 belief.append(0.0)
             elif ax_ay in [(0,0), (0,1), (1,1)]:
                 belief.append(0.0)
@@ -479,12 +479,12 @@ def generate_start_belief(question=1):
             (agent_pos, target_pos, call) = get_state[s]
             ax_ay = reverse_hash(agent_pos)
             tx_ty = reverse_hash(target_pos)
-            if ax_ay != (0,0) or call != 0:
+            if ax_ay != (1,1) or call != 0:
                 belief.append(0.0)
-            elif tx_ty not in [(0,0), (1,0), (0,1)]:
+            elif tx_ty not in [(0,1), (1,0), (1,1), (2,1)]:
                 belief.append(0.0)
             else:
-                belief.append(1/3) 
+                belief.append(1/4) 
         return belief
 
 
@@ -500,7 +500,7 @@ def generate_POMDP_file():
     generate()
 
     #I am skipping the initial belief state for now 
-    start_beliefs = generate_start_belief(2)
+    start_beliefs = generate_start_belief(QUESTION_NUMBER)
     print("start: ", end="")
     for prob in start_beliefs:
         print(prob, end=" ")
