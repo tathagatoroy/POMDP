@@ -63,10 +63,10 @@ def up_agent(pos_id):
 def down_agent(pos_id): 
     distribution = [0.0 for i in range(NO_OF_AGENT_POSITIONS)]
     (x,y) = reverse_hash(pos_id)
+    #succesfull
+    distribution[hash(x,min(y+1,GRID_HEIGHT - 1))] = p_x
     #unsuccesfull
     distribution[hash(x,max(y-1,0))] = 1 - p_x
-    #unsuccesfull
-    distribution[hash(x,min(y+1,GRID_HEIGHT - 1))] = p_x
     return distribution
 
 ''' given the position of the agent ,returns the distribution of the next position of the agent when the action is "LEFT" '''
@@ -118,7 +118,56 @@ ACTION_CODE = {
     "RIGHT" : 4
     }
 
+ACTION_FUNCTIONS = {
+    'STAY': stay_agent,
+    'UP': up_agent,
+    'DOWN': down_agent,
+    'LEFT': left_agent,
+    'RIGHT': right_agent
+}
+
 OBERVATIONS = [i+1 for i in range(NO_OF_OBSERVATIONS)]
+
+def create_transition_table_alt():
+    transition_table = [[[] for j in range(len(ACTIONS))] for i  in range(TOTAL_NO_OF_STATES)]
+    
+    for s in range(TOTAL_NO_OF_STATES):
+        (current_agent,current_target,call) = get_state[s]
+        target_distribution = move_target(current_target)
+
+        caught = False
+        if call == 1 and current_agent == current_target:
+            caught = True
+        
+        for a in ACTIONS:
+            distribution = [0.0 for i  in range(TOTAL_NO_OF_STATES)]
+            agent_distribution = ACTION_FUNCTIONS[a](current_agent)
+            for a_p in range(len(agent_distribution)):
+                for t_p in range(len(target_distribution)):
+                    p1 = agent_distribution[a_p]
+                    p2 = target_distribution[t_p]
+                    if caught:
+                        next_state_id = state_identity[a_p][t_p][0]
+                        distribution[next_state_id] = p1*p2
+                    else:
+                        if call == 1:
+                            #if call changes to 0
+                            next_state_id = state_identity[a_p][t_p][0]
+                            distribution[next_state_id] += p1*p2*0.1
+                            #if call remains 1
+                            next_state_id = state_identity[a_p][t_p][1]
+                            distribution[next_state_id] += p1*p2*0.9
+                        elif call == 0:
+                            #if call changes to  1
+                            next_state_id = state_identity[a_p][t_p][1]
+                            distribution[next_state_id] += p1*p2*0.5
+                            #if call remains 0
+                            next_state_id = state_identity[a_p][t_p][0]
+                            distribution[next_state_id] += p1*p2*0.5
+            
+            transition_table[s][ACTION_CODE[a]] = distribution
+    
+    return transition_table
 
 ''' TRANSITION TABLE CREATION , T[s][a][s'] denotes the probability of reaching state s' after taking action a from current state s '''
 
@@ -318,7 +367,7 @@ def create_transition_table():
     return transition_table
 
 
-'''function returns a observation table  .For every action and end state it returns a list of 6 tuple giving the probability of observation '''
+'''function returns a observation table. For every action and end state it returns a list of 6 tuple giving the probability of observation '''
 def generate_observations():
     observation_table = [[[] for i in range(len(ACTIONS))] for j in range(TOTAL_NO_OF_STATES)]
     for s in range(TOTAL_NO_OF_STATES):
