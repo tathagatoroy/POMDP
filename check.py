@@ -8,12 +8,12 @@ GRID_WIDTH = 4
 TOTAL_NO_OF_STATES = NO_OF_AGENT_POSITIONS*NO_OF_TARGET_POSITIONS*NO_OF_CALL_STATES
 NO_OF_OBSERVATIONS = 6
 DISCOUNT = 0.5
-ROLL_NUMBER = 2019111013
+ROLL_NUMBER = 2019111020
 p_x = 1-(((ROLL_NUMBER%10000)%30 + 1)/100)
 REWARD = (ROLL_NUMBER)%90 + 10
 STEP_COST = -1
 
-QUESTION_NUMBER = 2
+QUESTION_NUMBER = 1
 
 ''' function to convert (x,y) denoting grid position to an integer ''' 
 def hash(x,y):
@@ -486,6 +486,18 @@ def generate_start_belief(question=1):
             else:
                 belief.append(1/4) 
         return belief
+    elif question == 5:
+        for s in range(TOTAL_NO_OF_STATES):
+            (agent_pos, target_pos, call) = get_state[s]
+            ax_ay = reverse_hash(agent_pos)
+            tx_ty = reverse_hash(target_pos)
+            if (ax_ay not in [(0,0), (3,1)]) or (tx_ty not in [(1,0), (2,0), (1,1), (2,1)]):
+                belief.append(0.0)
+            elif ax_ay == (0,0):
+                belief.append(0.4 * 0.25 * 0.5)
+            elif ax_ay == (3,1):
+                belief.append(0.6 * 0.25 * 0.5)
+        return belief                
 
 
 ''' creates the POMDP file . PIPE the output to the desired file'''
